@@ -1,0 +1,52 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>
+    开始时间：<input type="text" id ="dateFrom"/>
+    结束时间：<input type="text" id= "dateEnd" />
+    <button onclick="RunStat();">实时统计</button>
+    <button onclick="RunTask();">开始任务</button>
+</h2>
+
+<script src="~/Scripts/jquery-1.10.2.min.js"></script>
+<script src="~/Scripts/jquery-ui-1.12.0.custom/jquery-ui.js"></script>
+<script src="~/Scripts/jquery-ui-1.12.0.custom/jquery-ui.min.js"></script>
+<link href="~/Scripts/jquery-ui-1.12.0.custom/jquery-ui.min.css" rel="stylesheet" />
+<link href="~/Scripts/jquery-ui-1.12.0.custom/jquery-ui.css" rel="stylesheet" />
+<script type="text/javascript">
+    
+    $(document).ready(function () {
+        $("#dateFrom").datepicker({ dateFormat: "yy-mm-dd" }).val();
+        $("#dateEnd").datepicker({ dateFormat: "yy-mm-dd" }).val();
+    });
+
+    function RunTask() {
+     
+        $.ajax({
+            type: "post",
+            url: "/Download/RunTask",
+            success: function () {
+                
+            }
+        });
+    }
+
+    function RunStat() {
+        var data = {
+            DateFrom: $("#dateFrom").val(),
+            DateEnd: $("#dateEnd").val()
+        }
+
+        $.ajax({
+            type: "post",
+            url: "/Download/RunStat",
+            data: data,
+            success: function () {
+
+            }
+        });
+    }
+
+</script>
