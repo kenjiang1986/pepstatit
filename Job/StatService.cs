@@ -351,7 +351,8 @@ namespace Job
 
             });
 
-            return list.Distinct(new PropertyComparer<UserStat>("Company")).ToList();
+            return list.Distinct(new PropertyComparer<UserStat>("Company"))
+              .OrderByDescending(x => x.AddProjectCount).ThenBy(x => x.Company).ToList();
         }
 
 
