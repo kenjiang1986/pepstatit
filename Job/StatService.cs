@@ -39,9 +39,9 @@ namespace Job
         {
             {StatType.InquiryResult.ToString(),  "取得询价结果-Peacock.InWork2.MvcWebSite.Controllers.ProjectController"},
             {StatType.InquiryHistory.ToString(),  "获取历史询价记录-Peacock.InWork2.MvcWebSite.Controllers.InquiryController"},
-            {StatType.OfferCase.ToString(),  "报盘案例-Peacock.InWork4.Services.API.BaseAPIService"},
-            {StatType.DealCase.ToString(),  "成交案例-Peacock.InWork4.Services.API.BaseAPIService"},
-            {StatType.ReportCase.ToString(),  "报告案例-Peacock.InWork4.Services.API.BaseAPIService"},
+            {StatType.OfferCase.ToString(),  "报盘案例-Peacock.InWork4.Services.API.BasisApiService"},
+            {StatType.DealCase.ToString(),  "成交案例-Peacock.InWork4.Services.API.BasisApiService"},
+            {StatType.ReportCase.ToString(),  "报告案例-Peacock.InWork4.Services.API.BasisApiService"},
             {StatType.UserLogin.ToString(),  "用户登录-Peacock.InWork2.BLL.UserBLL"},
             {StatType.IntegratedQuery.ToString(),  "综合查询》查询"},
             //微信端
@@ -352,7 +352,7 @@ namespace Job
             });
 
             return list.Distinct(new PropertyComparer<UserStat>("Company"))
-              .OrderByDescending(x => x.AddProjectCount).ThenBy(x => x.Company).ToList();
+                .OrderByDescending(x => x.AddProjectCount).ThenBy(x => x.Company).ToList();
         }
 
 
