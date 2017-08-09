@@ -31,6 +31,7 @@ namespace Job
         private readonly string DbCon = ConfigurationManager.AppSettings["DbConnection"];
         private readonly string testUserCon = ConfigurationManager.AppSettings["TestUserConnection"];
         private readonly string userCon = ConfigurationManager.AppSettings["UserConnection"];
+        private readonly string waicaiCon = ConfigurationManager.AppSettings["WaicaiConnection"];
 
         private string startDate = DateTime.Now.AddDays(-6).ToString();
         private string endDate = DateTime.Now.ToString();
@@ -87,8 +88,8 @@ namespace Job
             try
             {
                 LogHelper.WriteLog("开始执行统计任务");
-                var testList = GetStatData(testDbCon, testUserCon, SystemCode.PEPDemo);
-                var list = GetStatData(DbCon, userCon, SystemCode.PEP);
+                var testList = GetStatData(testDbCon, testUserCon, waicaiCon, SystemCode.PEPDemo);
+                var list = GetStatData(DbCon, userCon, waicaiCon, SystemCode.PEP);
                 var pepList = GetPepStatData();
                 var listDc = new Dictionary<string, object>();
                 listDc.Add(ListType.List.ToString(), list);
@@ -111,24 +112,31 @@ namespace Job
         /// <param name="startDate"></param>
         /// <param name="endDate"></param>
         /// <returns></returns>
-        public IList<UserStat> GetStatData(string dbcon, string usercon, string sysCode)
+        public IList<UserStat> GetStatData(string dbCon, string userCon,string waicaiCon, string sysCode)
         {
             Dictionary<string, object> paras = new Dictionary<string, object>();
             paras.Add("@startDate", new ParamesDTO() { Value = startDate});
             paras.Add("@endDate", new ParamesDTO() { Value = string.Format("{0} 23:59:00", endDate)});
             //paras.Add("@startDate", new ParamesDTO() { Value = "2016-7-11 00:00:00" });
             //paras.Add("@endDate", new ParamesDTO() { Value = "2016-7-17 23:59:00" });
-            IDbConnection con = new SqlConnection(dbcon);
+            IDbConnection con = new SqlConnection(dbCon);
 
             var inquiryList = SqlHelper.CallProcedure<UserStat>("GetInquiryCount", paras, con);
             var addProjectList = SqlHelper.CallProcedure<UserStat>("GetAddProjectCount", paras, con);
             var outTaskList = SqlHelper.CallProcedure<UserStat>("GetOutTaskCount", paras, con);
             var finishList = SqlHelper.CallProcedure<UserStat>("GetFinishProjectCount", paras, con);
 
-            var conn = new MySqlConnection(usercon);
+            var conn = new MySqlConnection(userCon);
             var userParas = new Dictionary<string, object>();
             userParas.Add("?CDate", new ParamesDTO() { Value = endDate });
             var userList = SqlHelper.CallMySqlProcedure<UserStat>("GetCompanyCount", userParas, conn);
+            //自建外采
+            conn = new MySqlConnection(waicaiCon);
+            var waicaiParas = new Dictionary<string, object>();
+            waicaiParas.Add("?startDate", new ParamesDTO() { Value = startDate });
+            waicaiParas.Add("?endDate", new ParamesDTO() { Value = endDate });
+            var selfWaicaiList = SqlHelper.CallMySqlProcedure<UserStat>("P_GetWaicaiCount", waicaiParas, conn);
+
 
 
             //获取日志统计数据
@@ -153,8 +161,8 @@ namespace Job
                 .Union(historyList).Union(offerList).Union(reportList).Union(dealList)
                 .Union(confirmList).Union(logList).Union(feebackList).Union(confirmFeeList)
                 .Union(feeList).Union(smsList).Union(scanList).Union(loginList)
-                .Union(queryList).ToList();
-                
+                .Union(queryList).Union(selfWaicaiList).ToList();
+
             var result = ConvertList(list);
                                      
             return result;
@@ -395,7 +403,7 @@ namespace Job
                     AddWechatSheet(wechatSheet, (List<UserStat>)listDc[ListType.List.ToString()]);
                     
                     string fileName = ConfigurationManager.AppSettings["FilePath"] + DateTime.Now.ToString("yyyy-MM-dd") +
-                                 ".xls";
+                                 ".xlsx";
                     ep.SaveAs(new FileInfo(fileName));
                 }
             }
