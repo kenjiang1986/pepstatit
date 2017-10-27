@@ -10,6 +10,10 @@ namespace Job.DTO
 {
     public class Email
     {
+        public Email()
+        {
+            MailAttachmentList = new List<Attachment>();
+        }
         public string EmailAccount { get; set; }
 
         public string EmailPassword { get; set; }
