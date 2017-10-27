@@ -97,6 +97,17 @@ namespace Job
                 listDc.Add(ListType.SimpleList.ToString(), pepList);
                 SaveFile(listDc);
                 LogHelper.WriteLog("获取统计数据完成");
+                var email = new Email();
+                email.EmailAccount = "zhenjian.jiang@yunfangdata.com";
+                email.EmailPassword = "Ken19861216";
+                email.SmtpService = "smtp.yunfangdata.com";
+                email.Subject = string.Format("评E评统计{0}-{1}", startDate, endDate);
+                email.Content = "评E评统计";
+                email.FromAddress = "zhenjian.jiang@yunfangdata.com";
+                email.ToAddress = "zhenjian.jiang@yunfangdata.com";
+                email.MailAttachmentList.Add(new System.Net.Mail.Attachment(ConfigurationManager.AppSettings["FilePath"] + DateTime.Now.ToString("yyyy-MM-dd") +
+                                                                            ".xlsx"));
+                EmailHelper.SendEmail(email);
             }
             catch (Exception ex)
             {

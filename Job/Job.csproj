@@ -79,6 +79,8 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -86,12 +88,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DTO\Email.cs" />
     <Compile Include="DTO\Log.cs" />
     <Compile Include="DTO\ParamesDTO.cs" />
     <Compile Include="DTO\StatEnum.cs" />
     <Compile Include="DTO\SystemCode.cs" />
     <Compile Include="DTO\UserStat.cs" />
     <Compile Include="EsClient.cs" />
+    <Compile Include="Helper\EmailHelper.cs" />
     <Compile Include="Helper\LogHelper.cs" />
     <Compile Include="Helper\SqlHelper.cs" />
     <Compile Include="Helper\PropertyComparer.cs" />
