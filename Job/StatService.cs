@@ -84,16 +84,17 @@ namespace Job
 
         public void Run()
         {
-        Run:
+            int i = 0;
+            Run:
             try
             {
                 LogHelper.WriteLog("开始执行统计任务");
-                var testList = GetStatData(testDbCon, testUserCon, waicaiCon, SystemCode.PEPDemo);
+                //var testList = GetStatData(testDbCon, testUserCon, waicaiCon, SystemCode.PEPDemo);
                 var list = GetStatData(DbCon, userCon, waicaiCon, SystemCode.PEP);
                 var pepList = GetPepStatData();
                 var listDc = new Dictionary<string, object>();
                 listDc.Add(ListType.List.ToString(), list);
-                listDc.Add(ListType.DemoList.ToString(), testList);
+                //listDc.Add(ListType.DemoList.ToString(), testList);
                 listDc.Add(ListType.SimpleList.ToString(), pepList);
                 SaveFile(listDc);
                 LogHelper.WriteLog("获取统计数据完成");
@@ -112,7 +113,12 @@ namespace Job
             catch (Exception ex)
             {
                 LogHelper.Error("执行任务错误", ex);
-                goto Run;
+                i++;
+                if (i < 5)
+                {
+                    goto Run;
+                }
+                
             }
         }
 
@@ -135,7 +141,54 @@ namespace Job
             var inquiryList = SqlHelper.CallProcedure<UserStat>("GetInquiryCount", paras, con);
             var addProjectList = SqlHelper.CallProcedure<UserStat>("GetAddProjectCount", paras, con);
             var outTaskList = SqlHelper.CallProcedure<UserStat>("GetOutTaskCount", paras, con);
-            var finishList = SqlHelper.CallProcedure<UserStat>("GetFinishProjectCount", paras, con);
+            //预估报告
+            Dictionary<string, object> preReportParas = new Dictionary<string, object>();
+            preReportParas.Add("@startDate", new ParamesDTO() { Value = startDate });
+            preReportParas.Add("@endDate", new ParamesDTO() { Value = string.Format("{0} 23:59:00", endDate) });
+            preReportParas.Add("@ReportCategory", "预估报告");
+            var preReportList = SqlHelper.CallProcedure<UserStat>("GetFinishProjectCount", preReportParas, con);
+            preReportList.ToList().ForEach(x => x.Report = 0);
+            //LogHelper.WriteLog("preReportList:" + preReportList.Count);
+
+            //预估报告修改
+            preReportParas.Add("@ReportProperty", "修改");
+            var preReportModifyList = SqlHelper.CallProcedure<UserStat>("GetChangeProjectCount", preReportParas, con);
+            preReportModifyList.ToList().ForEach(x => x.PreviewsReportAdd = 0);
+            preReportModifyList.ToList().ForEach(x => x.ReportAdd = 0);
+            preReportModifyList.ToList().ForEach(x => x.ReportModify = 0);
+            //LogHelper.WriteLog("preReportModifyList:" + preReportModifyList.Count);
+
+            //预估报告加出
+            preReportParas["@ReportProperty"] = "加出";
+            var preReportAddList = SqlHelper.CallProcedure<UserStat>("GetChangeProjectCount", preReportParas, con);
+            preReportAddList.ToList().ForEach(x => x.PreviewsReportModify = 0);
+            preReportAddList.ToList().ForEach(x => x.ReportAdd = 0);
+            preReportAddList.ToList().ForEach(x => x.ReportModify = 0);
+            //LogHelper.WriteLog("preReportAddList:" + preReportModifyList.Count);
+
+            //正式报告
+            var reportParas = new Dictionary<string, object>();
+            reportParas.Add("@startDate", new ParamesDTO() { Value = startDate });
+            reportParas.Add("@endDate", new ParamesDTO() { Value = string.Format("{0} 23:59:00", endDate) });
+            reportParas.Add("@ReportCategory", "正式报告");
+            var reportFinishList = SqlHelper.CallProcedure<UserStat>("GetFinishProjectCount", reportParas, con);
+            reportFinishList.ToList().ForEach(x => x.PreviewsReport = 0);
+
+            //正式报告修改
+            reportParas.Add("@ReportProperty", "修改");
+            var reportModifyList = SqlHelper.CallProcedure<UserStat>("GetChangeProjectCount", reportParas, con);
+            reportModifyList.ToList().ForEach(x => x.PreviewsReportAdd = 0);
+            reportModifyList.ToList().ForEach(x => x.ReportAdd = 0);
+            reportModifyList.ToList().ForEach(x => x.PreviewsReportModify = 0);
+            //LogHelper.WriteLog("reportModifyList:" + reportModifyList.Count);
+
+            //正式报告加出
+            reportParas["@ReportProperty"] = "加出";
+            var reportAddList = SqlHelper.CallProcedure<UserStat>("GetChangeProjectCount", reportParas, con);
+            reportAddList.ToList().ForEach(x => x.PreviewsReportAdd = 0);
+            reportAddList.ToList().ForEach(x => x.ReportModify = 0);
+            reportAddList.ToList().ForEach(x => x.PreviewsReportModify = 0);
+            //LogHelper.WriteLog("reportAddList:" + reportAddList.Count);
 
             var conn = new MySqlConnection(userCon);
             var userParas = new Dictionary<string, object>();
@@ -168,7 +221,9 @@ namespace Job
             var scanList = GetLogData(SystemCode.PEPWechat, StatType.Scan);
 
             var list = inquiryList.Union(addProjectList).Union(outTaskList)
-                .Union(finishList).Union(userList).Union(inquiryResultList)
+                .Union(preReportList).Union(preReportAddList).Union(preReportModifyList)
+                .Union(reportFinishList).Union(reportAddList).Union(reportModifyList)
+                .Union(userList).Union(inquiryResultList)
                 .Union(historyList).Union(offerList).Union(reportList).Union(dealList)
                 .Union(confirmList).Union(logList).Union(feebackList).Union(confirmFeeList)
                 .Union(feeList).Union(smsList).Union(scanList).Union(loginList)
@@ -260,21 +315,21 @@ namespace Job
 
            switch (statType)
             {
-                case StatType.InquiryResult:
-                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryResult = x.StatCount }).ToList();
-                    break;
-                case StatType.InquiryHistory:
-                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryHistory = x.StatCount }).ToList();
-                    break;
-                case StatType.OfferCase:
-                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, OfferCase = x.StatCount }).ToList();
-                    break;
-                case StatType.DealCase:
-                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, DealCase = x.StatCount }).ToList();
-                    break;
-                case StatType.ReportCase:
-                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, ReportCase = x.StatCount }).ToList();
-                    break;
+                //case StatType.InquiryResult:
+                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryResult = x.StatCount }).ToList();
+                //    break;
+                //case StatType.InquiryHistory:
+                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryHistory = x.StatCount }).ToList();
+                //    break;
+                //case StatType.OfferCase:
+                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, OfferCase = x.StatCount }).ToList();
+                //    break;
+                //case StatType.DealCase:
+                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, DealCase = x.StatCount }).ToList();
+                //    break;
+                //case StatType.ReportCase:
+                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, ReportCase = x.StatCount }).ToList();
+                //    break;
                 case StatType.UserLogin:
                     result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, UserLogin = x.StatCount }).ToList();
                     break;
@@ -323,21 +378,21 @@ namespace Job
                 case StatType.SearchOnlineProject:
                     result = list.Select(x => new UserStat { UserName = x.User, SearchOnlineProject = x.StatCount }).ToList();
                     break;
-                case StatType.PepInquiryResult:
-                    result = list.Select(x => new UserStat { UserName = x.User, InquiryResult = x.StatCount }).ToList();
-                    break;
-                case StatType.PepInquiryHistory:
-                    result = list.Select(x => new UserStat { UserName = x.User, InquiryHistory = x.StatCount }).ToList();
-                    break;
-                case StatType.PepOfferCase:
-                    result = list.Select(x => new UserStat { UserName = x.User, OfferCase = x.StatCount }).ToList();
-                    break;
-                case StatType.PepReportCase:
-                    result = list.Select(x => new UserStat { UserName = x.User, ReportCase = x.StatCount }).ToList();
-                    break;
-                case StatType.PepDealCase:
-                    result = list.Select(x => new UserStat { UserName = x.User, DealCase = x.StatCount }).ToList();
-                    break;
+                //case StatType.PepInquiryResult:
+                //    result = list.Select(x => new UserStat { UserName = x.User, InquiryResult = x.StatCount }).ToList();
+                //    break;
+                //case StatType.PepInquiryHistory:
+                //    result = list.Select(x => new UserStat { UserName = x.User, InquiryHistory = x.StatCount }).ToList();
+                //    break;
+                //case StatType.PepOfferCase:
+                //    result = list.Select(x => new UserStat { UserName = x.User, OfferCase = x.StatCount }).ToList();
+                //    break;
+                //case StatType.PepReportCase:
+                //    result = list.Select(x => new UserStat { UserName = x.User, ReportCase = x.StatCount }).ToList();
+                //    break;
+                //case StatType.PepDealCase:
+                //    result = list.Select(x => new UserStat { UserName = x.User, DealCase = x.StatCount }).ToList();
+                //    break;
             }
 
             return result;
@@ -352,12 +407,12 @@ namespace Job
                 x.InquiryCount = group.Sum(y => y.InquiryCount);
                 x.AddProjectCount = group.Sum(y => y.AddProjectCount);
                 x.OutTaskCount = group.Sum(y => y.OutTaskCount);
-                x.ProjectFinishCount = group.Sum(y => y.ProjectFinishCount);
-                x.InquiryResult = group.Sum(y => y.InquiryResult);
-                x.InquiryHistory = group.Sum(y => y.InquiryHistory);
-                x.OfferCase = group.Sum(y => y.OfferCase);
-                x.DealCase = group.Sum(y => y.DealCase);
-                x.ReportCase = group.Sum(y => y.ReportCase);
+                x.PreviewsReport = group.Sum(y => y.PreviewsReport);
+                x.PreviewsReportModify = group.Sum(y => y.PreviewsReportModify);
+                x.PreviewsReportAdd = group.Sum(y => y.PreviewsReportAdd);
+                x.Report = group.Sum(y => y.Report);
+                x.ReportModify = group.Sum(y => y.ReportModify);
+                x.ReportAdd = group.Sum(y => y.ReportAdd);
                 x.UserLogin = group.Sum(y => y.UserLogin);
                 x.IntegratedQuery = group.Sum(y => y.IntegratedQuery);
                 x.ConfrimListCount = group.Sum(y => y.ConfrimListCount);
@@ -370,6 +425,8 @@ namespace Job
 
             });
 
+            LogHelper.WriteLog(
+                "PreviewsReportCount:" + list.Where(x => x.PreviewsReport > 0).FirstOrDefault().PreviewsReport);
             return list.Distinct(new PropertyComparer<UserStat>("Company"))
                 .OrderByDescending(x => x.AddProjectCount).ThenBy(x => x.Company).ToList();
         }
@@ -380,9 +437,9 @@ namespace Job
            list.ForEach(x =>
            {
                var group = list.Where(y => x.UserName == y.UserName);
-               x.ReportCase = group.Sum(y => y.ReportCase);
-               x.OfferCase = group.Sum(y => y.OfferCase);
-               x.DealCase = group.Sum(y => y.DealCase);
+               //x.ReportCase = group.Sum(y => y.ReportCase);
+               //x.OfferCase = group.Sum(y => y.OfferCase);
+               //x.DealCase = group.Sum(y => y.DealCase);
                x.WaicaiUser = group.Sum(y => y.WaicaiUser);
                x.ProjectData = group.Sum(y => y.ProjectData);
                x.ProjectList = group.Sum(y => y.ProjectList);
@@ -404,11 +461,11 @@ namespace Job
                     ExcelWorksheet sheet = ep.Workbook.Worksheets.Add("企业版");
                     AddSheet(sheet, (List<UserStat>)listDc[ListType.List.ToString()]);
                     
-                    ExcelWorksheet wSheet = ep.Workbook.Worksheets.Add("演示环境");
-                    AddSheet(wSheet, (List<UserStat>)listDc[ListType.DemoList.ToString()]);
+                    //ExcelWorksheet wSheet = ep.Workbook.Worksheets.Add("演示环境");
+                    //AddSheet(wSheet, (List<UserStat>)listDc[ListType.DemoList.ToString()]);
 
-                    ExcelWorksheet pepSheet = ep.Workbook.Worksheets.Add("免费版");
-                    AddPepSheet(pepSheet, (List<UserStat>)listDc[ListType.SimpleList.ToString()]);
+                    //ExcelWorksheet pepSheet = ep.Workbook.Worksheets.Add("免费版");
+                    //AddPepSheet(pepSheet, (List<UserStat>)listDc[ListType.SimpleList.ToString()]);
 
                     ExcelWorksheet wechatSheet = ep.Workbook.Worksheets.Add("微信端");
                     AddWechatSheet(wechatSheet, (List<UserStat>)listDc[ListType.List.ToString()]);
@@ -432,12 +489,12 @@ namespace Job
             wSheet.Cells[1, 3].Value = "估值次数";
             wSheet.Cells[1, 4].Value = "接单数（立项）";
             wSheet.Cells[1, 5].Value = "外勘次数";
-            wSheet.Cells[1, 6].Value = "出报告次数";
-            wSheet.Cells[1, 7].Value = "取得询价结果";
-            wSheet.Cells[1, 8].Value = "获取历史询价记录";
-            wSheet.Cells[1, 9].Value = "获取报盘案例";
-            wSheet.Cells[1, 10].Value = "获取成交案例";
-            wSheet.Cells[1, 11].Value = "获取报告案例";
+            wSheet.Cells[1, 6].Value = "预估报告";
+            wSheet.Cells[1, 7].Value = "预估报告修改";
+            wSheet.Cells[1, 8].Value = "预估报告加出";
+            wSheet.Cells[1, 9].Value = "正式报告";
+            wSheet.Cells[1, 10].Value = "正式报告修改";
+            wSheet.Cells[1, 11].Value = "正式报告加出";
             wSheet.Cells[1, 12].Value = "用户登录次数";
             wSheet.Cells[1, 13].Value = "综合查询次数";
 
@@ -460,12 +517,12 @@ namespace Job
                 wSheet.Cells[i + 2, 3].Value = list[i].InquiryCount == 0 ? string.Empty : list[i].InquiryCount.ToString();
                 wSheet.Cells[i + 2, 4].Value = list[i].AddProjectCount == 0 ? string.Empty : list[i].AddProjectCount.ToString();
                 wSheet.Cells[i + 2, 5].Value = list[i].OutTaskCount == 0 ? string.Empty : list[i].OutTaskCount.ToString();
-                wSheet.Cells[i + 2, 6].Value = list[i].ProjectFinishCount == 0 ? string.Empty : list[i].ProjectFinishCount.ToString();
-                wSheet.Cells[i + 2, 7].Value = list[i].InquiryResult == 0 ? string.Empty : list[i].InquiryResult.ToString();
-                wSheet.Cells[i + 2, 8].Value = list[i].InquiryHistory == 0 ? string.Empty : list[i].InquiryHistory.ToString();
-                wSheet.Cells[i + 2, 9].Value = list[i].OfferCase == 0 ? string.Empty : list[i].OfferCase.ToString();
-                wSheet.Cells[i + 2, 10].Value = list[i].DealCase == 0 ? string.Empty : list[i].DealCase.ToString();
-                wSheet.Cells[i + 2, 11].Value = list[i].ReportCase == 0 ? string.Empty : list[i].ReportCase.ToString();
+                wSheet.Cells[i + 2, 6].Value = list[i].PreviewsReport == 0 ? string.Empty : list[i].PreviewsReport.ToString();
+                wSheet.Cells[i + 2, 7].Value = list[i].PreviewsReportModify == 0 ? string.Empty : list[i].PreviewsReportModify.ToString();
+                wSheet.Cells[i + 2, 8].Value = list[i].PreviewsReportAdd == 0 ? string.Empty : list[i].PreviewsReportAdd.ToString();
+                wSheet.Cells[i + 2, 9].Value = list[i].Report == 0 ? string.Empty : list[i].Report.ToString();
+                wSheet.Cells[i + 2, 10].Value = list[i].ReportModify == 0 ? string.Empty : list[i].ReportModify.ToString();
+                wSheet.Cells[i + 2, 11].Value = list[i].ReportAdd == 0 ? string.Empty : list[i].ReportAdd.ToString();
                 wSheet.Cells[i + 2, 12].Value = list[i].UserLogin == 0 ? string.Empty : list[i].UserLogin.ToString();
                 wSheet.Cells[i + 2, 13].Value = list[i].IntegratedQuery == 0 ? string.Empty : list[i].IntegratedQuery.ToString();
             }
@@ -515,12 +572,12 @@ namespace Job
                 wSheet.Cells[i + 2, 4].Value = list[i].OutTaskCount == 0
                     ? string.Empty
                     : list[i].OutTaskCount.ToString();
-                wSheet.Cells[i + 2, 5].Value = list[i].ProjectFinishCount == 0
-                    ? string.Empty
-                    : list[i].ProjectFinishCount.ToString();
-                wSheet.Cells[i + 2, 6].Value = list[i].OfferCase == 0 ? string.Empty : list[i].OfferCase.ToString();
-                wSheet.Cells[i + 2, 7].Value = list[i].DealCase == 0 ? string.Empty : list[i].DealCase.ToString();
-                wSheet.Cells[i + 2, 8].Value = list[i].ReportCase == 0 ? string.Empty : list[i].ReportCase.ToString();
+                //wSheet.Cells[i + 2, 5].Value = list[i].ProjectFinishCount == 0
+                //    ? string.Empty
+                //    : list[i].ProjectFinishCount.ToString();
+                //wSheet.Cells[i + 2, 6].Value = list[i].OfferCase == 0 ? string.Empty : list[i].OfferCase.ToString();
+                //wSheet.Cells[i + 2, 7].Value = list[i].DealCase == 0 ? string.Empty : list[i].DealCase.ToString();
+                //wSheet.Cells[i + 2, 8].Value = list[i].ReportCase == 0 ? string.Empty : list[i].ReportCase.ToString();
                 wSheet.Cells[i + 2, 9].Value = list[i].WaicaiUser == 0 ? string.Empty : list[i].WaicaiUser.ToString();
                 wSheet.Cells[i + 2, 10].Value = list[i].ProjectList == 0 ? string.Empty : list[i].ProjectList.ToString();
                 wSheet.Cells[i + 2, 11].Value = list[i].PepUserLogin == 0

@@ -39,34 +39,36 @@ namespace Job.DTO
         public int OutTaskCount { get; set; }
 
         /// <summary>
-        /// 报告完成数量
+        /// 预估报告完成数量
         /// </summary>
-        public int ProjectFinishCount { get; set; }
+        public int PreviewsReport { get; set; }
 
         /// <summary>
-        /// 取得询价结果
+        /// 预估报告修改
         /// </summary>
-        public int InquiryResult { get; set; }
+        public int PreviewsReportModify { get; set; }
 
         /// <summary>
-        /// 获取历史询价记录
+        /// 预估报告加出
         /// </summary>
-        public int InquiryHistory { get; set; }
+        public int PreviewsReportAdd { get; set; }
 
         /// <summary>
-        /// 获取报盘案例
+        /// 正式报告完成数量
         /// </summary>
-        public int OfferCase { get; set; }
+        public int Report { get; set; }
 
         /// <summary>
-        /// 获取成交案例
+        /// 正式报告修改
         /// </summary>
-        public int DealCase { get; set; }
+        public int ReportModify { get; set; }
 
         /// <summary>
-        /// 获取报告案例
+        /// 正式报告加出
         /// </summary>
-        public int ReportCase { get; set; }
+        public int ReportAdd { get; set; }
+
+
 
         /// <summary>
         /// 企业版用户登录 
