@@ -315,9 +315,9 @@ namespace Job
 
            switch (statType)
             {
-                //case StatType.InquiryResult:
-                //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryResult = x.StatCount }).ToList();
-                //    break;
+                case StatType.InquiryResult:
+                    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryResult = x.StatCount }).ToList();
+                    break;
                 //case StatType.InquiryHistory:
                 //    result = list.Select(x => new UserStat { Company = x.Company.Contains("仁达") && x.Company.Contains("分公司") ? x.Company.Substring(0, x.Company.IndexOf('分')) : x.Company, InquiryHistory = x.StatCount }).ToList();
                 //    break;
@@ -378,9 +378,9 @@ namespace Job
                 case StatType.SearchOnlineProject:
                     result = list.Select(x => new UserStat { UserName = x.User, SearchOnlineProject = x.StatCount }).ToList();
                     break;
-                //case StatType.PepInquiryResult:
-                //    result = list.Select(x => new UserStat { UserName = x.User, InquiryResult = x.StatCount }).ToList();
-                //    break;
+                case StatType.PepInquiryResult:
+                    result = list.Select(x => new UserStat { UserName = x.User, InquiryResult = x.StatCount }).ToList();
+                    break;
                 //case StatType.PepInquiryHistory:
                 //    result = list.Select(x => new UserStat { UserName = x.User, InquiryHistory = x.StatCount }).ToList();
                 //    break;
@@ -407,6 +407,7 @@ namespace Job
                 x.InquiryCount = group.Sum(y => y.InquiryCount);
                 x.AddProjectCount = group.Sum(y => y.AddProjectCount);
                 x.OutTaskCount = group.Sum(y => y.OutTaskCount);
+                x.InquiryResult = group.Sum(y => y.InquiryResult);
                 x.PreviewsReport = group.Sum(y => y.PreviewsReport);
                 x.PreviewsReportModify = group.Sum(y => y.PreviewsReportModify);
                 x.PreviewsReportAdd = group.Sum(y => y.PreviewsReportAdd);
@@ -497,8 +498,9 @@ namespace Job
             wSheet.Cells[1, 11].Value = "正式报告加出";
             wSheet.Cells[1, 12].Value = "用户登录次数";
             wSheet.Cells[1, 13].Value = "综合查询次数";
+            wSheet.Cells[1, 14].Value = "取得询价结果";
 
-            for (int s = 1; s <= 13; s++)
+            for (int s = 1; s <= 14; s++)
             {
                 //设置列头样式
                 wSheet.Cells[1, s].Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -525,6 +527,7 @@ namespace Job
                 wSheet.Cells[i + 2, 11].Value = list[i].ReportAdd == 0 ? string.Empty : list[i].ReportAdd.ToString();
                 wSheet.Cells[i + 2, 12].Value = list[i].UserLogin == 0 ? string.Empty : list[i].UserLogin.ToString();
                 wSheet.Cells[i + 2, 13].Value = list[i].IntegratedQuery == 0 ? string.Empty : list[i].IntegratedQuery.ToString();
+                wSheet.Cells[i + 2, 14].Value = list[i].InquiryResult == 0 ? string.Empty : list[i].InquiryResult.ToString();
             }
 
             return wSheet;

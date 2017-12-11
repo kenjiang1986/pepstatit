@@ -39,6 +39,11 @@ namespace Job.DTO
         public int OutTaskCount { get; set; }
 
         /// <summary>
+        /// 取得询价结果
+        /// </summary>
+        public int InquiryResult { get; set; }
+
+        /// <summary>
         /// 预估报告完成数量
         /// </summary>
         public int PreviewsReport { get; set; }
