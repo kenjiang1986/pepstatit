@@ -43,7 +43,7 @@ namespace Job
             {StatType.OfferCase.ToString(),  "报盘案例-Peacock.InWork4.Services.API.BasisApiService"},
             {StatType.DealCase.ToString(),  "成交案例-Peacock.InWork4.Services.API.BasisApiService"},
             {StatType.ReportCase.ToString(),  "报告案例-Peacock.InWork4.Services.API.BasisApiService"},
-            {StatType.UserLogin.ToString(),  "用户登录-Peacock.InWork2.BLL.UserBLL"},
+            {StatType.UserLogin.ToString(),  "用户登录-Peacock.InWork2.BLL.UserService"},
             {StatType.IntegratedQuery.ToString(),  "综合查询》查询"},
             //微信端
             {StatType.ConfrimList.ToString(),  "微信端获取确认责任列表-Peacock.PEP.WeChat.Service.ChargeService"},
