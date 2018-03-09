@@ -265,11 +265,11 @@ namespace Job
         private IList<UserStat> GetLogData(string sysCode, StatType statType)
         {
             var content = string.Format("{0}.requestconcent.raw", sysCode);
-            var timeStamp = string.Format("{0}.@timestamp", sysCode);
+            var timeLocal = string.Format("{0}.time_local.raw", sysCode);
             //var endDate = string.Format( "{0}T23:59:00",DateTime.Now.ToString());
             //var startDate = string.Format("{0}T00:00:00", DateTime.Now.AddDays(-6));
-            var startDate = string.Format("{0}T00:00:00", this.startDate);
-            var endDate = string.Format("{0}T23:59:00", this.endDate);
+            var startDate = string.Format("{0}000000", this.startDate.Replace("-",""));
+            var endDate = string.Format("{0}235959", this.endDate.Replace("-", ""));
 
             ISearchResponse<Log> searchResults = null;
 
@@ -279,9 +279,9 @@ namespace Job
                     (x => x.Query(p => p.Term(s =>
                         s.Field(content)
                             .Value(StatContent[statType.ToString()]))
-                                       && p.TermRange(s1 => s1.Field(timeStamp)
+                                       && p.TermRange(s1 => s1.Field(timeLocal)
                                            .GreaterThanOrEquals(startDate)
-                                           .LessThanOrEquals(endDate))).Take(10000));
+                                           .LessThanOrEquals(endDate))).Take(50000));
             }
             else
             {
@@ -289,9 +289,9 @@ namespace Job
               (x => x.Query(p => p.QueryString(s =>
                   s.DefaultField(content)
                   .Query(StatContent[statType.ToString()]))
-                  && p.TermRange(s1 => s1.Field(timeStamp)
+                  && p.TermRange(s1 => s1.Field(timeLocal)
                           .GreaterThanOrEquals(startDate)
-                          .LessThanOrEquals(endDate))).Take(10000));
+                          .LessThanOrEquals(endDate))).Take(50000));
             }
 
             LogHelper.WriteLog(statType.ToString() + ":" + searchResults.Total);
